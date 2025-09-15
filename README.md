@@ -1,6 +1,6 @@
 # Eatograph 🍽️
 
-Eatograph is a calorie, meal and also workout tracking web application that helps users log their daily meals, track calories, and manage diet goals.  
+Eatograph is a web application for tracking calories, meals, and workouts. It allows users to log daily meals, monitor calories consumed and calories burned, and manage their diet and fitness goals.
 The app is built with **HTML, CSS, and Vanilla JavaScript**, following OOP and modular design principles.
 
 ## Features
