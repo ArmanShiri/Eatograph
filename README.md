@@ -5,6 +5,7 @@ The app is built with **HTML, CSS, and Vanilla JavaScript**, following OOP and m
 
 ## Features
 - ➕ Add, edit, and delete meals
+- 🏋️ Add, remove and log workouts and track calories burned
 - 🔢 Automatic calorie calculation
 - 💾 Data persistence using Local Storage
 - 🎨 Clean and responsive UI
