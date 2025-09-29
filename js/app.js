@@ -1,9 +1,9 @@
 class CalorieTracker {
     constructor() {
-        this._calorieLimit = 2000;
-        this._totalCalories = 0;
-        this._meals = [];
-        this._workouts = [];
+        this._calorieLimit = Storage.getCalorieLimit();
+        this._totalCalories = Storage.getTotalCalories();
+        this._meals = Storage.getMeals();
+        this._workouts = Storage.getWorkouts();
 
         this._displayTotalCalories();
         this._displayCaloriesLimit();
@@ -11,6 +11,8 @@ class CalorieTracker {
         this._displayCaloriesIntake();
         this._displayCaloriesRemaining();
         this._displayCaloriesProgress();
+
+        document.getElementById('limit').value = this._calorieLimit;
     }
 
     // Public methods
@@ -18,6 +20,8 @@ class CalorieTracker {
         this._meals.push(meal);
         this._displayMeal(meal);
         this._totalCalories += meal.calories;
+        Storage.setTotalCalories(this._totalCalories);
+        Storage.saveMeal(meal);
         this._updateUI();
     }
 
@@ -30,9 +34,9 @@ class CalorieTracker {
         }
 
         this._meals = this._meals.filter(meal => meal.id !== mealId);
-
         this._totalCalories -= deletedMeal.calories;
-
+        Storage.setTotalCalories(this._totalCalories);
+        Storage.removeMeal(mealId);
         this._updateUI();
     }
 
@@ -41,6 +45,8 @@ class CalorieTracker {
         this._displayWorkout(workout);
         this._totalCalories -= workout.calories;
         -0;
+        Storage.setTotalCalories(this._totalCalories);
+        Storage.saveWorkout(workout);
         this._updateUI();
     }
 
@@ -55,9 +61,9 @@ class CalorieTracker {
         this._workouts = this._workouts.filter(
             workout => workout.id !== workoutId
         );
-
         this._totalCalories += deletedWorkout.calories;
-
+        Storage.setTotalCalories(this._totalCalories);
+        Storage.removeWorkout(workoutId);
         this._updateUI();
     }
 
@@ -65,19 +71,45 @@ class CalorieTracker {
         this._totalCalories = 0;
         this._meals = [];
         this._workouts = [];
+        Storage.clear();
         this._updateUI();
     }
 
-    setLimit(limit) {
-        this._calorieLimit = limit;
+    setLimit(calorieLimit) {
+        this._calorieLimit = calorieLimit;
+        Storage.setCalorielimit(calorieLimit);
         this._displayCaloriesLimit();
         this._updateUI();
+    }
+
+    loadItems() {
+        this._meals.forEach(meal => this._displayMeal(meal));
+        this._workouts.forEach(workout => this._displayWorkout(workout));
     }
 
     // Private Methods
     _displayTotalCalories() {
         const totalCaloriesEl = document.getElementById('calories-total');
         totalCaloriesEl.innerHTML = this._totalCalories;
+        if (this._totalCalories < 0) {
+            totalCaloriesEl.parentElement.parentElement.classList.remove(
+                'bg-primary'
+            );
+            totalCaloriesEl.parentElement.parentElement.classList.add(
+                'bg-danger'
+            );
+        } else if (
+            totalCaloriesEl.parentElement.parentElement.classList.contains(
+                'bg-danger'
+            )
+        ) {
+            totalCaloriesEl.parentElement.parentElement.classList.remove(
+                'bg-danger'
+            );
+            totalCaloriesEl.parentElement.parentElement.classList.add(
+                'bg-primary'
+            );
+        }
     }
 
     _displayCaloriesLimit() {
@@ -136,9 +168,17 @@ class CalorieTracker {
         const progressEl = document.getElementById('calorie-progress');
         const percentage = (this._totalCalories / this._calorieLimit) * 100;
         const width = Math.min(percentage, 100);
-        progressEl.style.width = `${width}%`;
 
-        if (+document.getElementById('calories-remaining').innerHTML <= 0) {
+        if (this._totalCalories >= 0) {
+            progressEl.style.width = `${width}%`;
+        } else {
+            progressEl.style.width = `${width * -1}%`;
+        }
+
+        if (
+            +document.getElementById('calories-remaining').innerHTML <= 0 ||
+            this._totalCalories < 0
+        ) {
             progressEl.classList.add('bg-danger');
         } else if (progressEl.classList.contains('bg-danger')) {
             progressEl.classList.remove('bg-danger');
@@ -212,10 +252,98 @@ class Workout {
     }
 }
 
+class Storage {
+    static getCalorieLimit(defaultLimit = 2000) {
+        let calorieLimit;
+        if (localStorage.getItem('calorieLimit') === null) {
+            calorieLimit = defaultLimit;
+        } else {
+            calorieLimit = localStorage.getItem('calorieLimit');
+        }
+        return calorieLimit;
+    }
+
+    static setCalorielimit(calorieLimit) {
+        localStorage.setItem('calorieLimit', calorieLimit);
+    }
+
+    static getTotalCalories(defaultCalories = 0) {
+        let totalCalories;
+        if (localStorage.getItem('totalCalories') === null) {
+            totalCalories = defaultCalories;
+        } else {
+            totalCalories = +localStorage.getItem('totalCalories');
+        }
+        return totalCalories;
+    }
+
+    static setTotalCalories(calories) {
+        localStorage.setItem('totalCalories', calories);
+    }
+
+    static getMeals() {
+        let meals;
+        if (localStorage.getItem('meals') === null) {
+            meals = [];
+        } else {
+            meals = JSON.parse(localStorage.getItem('meals'));
+        }
+        return meals;
+    }
+
+    static saveMeal(meal) {
+        const meals = this.getMeals();
+        meals.push(meal);
+        localStorage.setItem('meals', JSON.stringify(meals));
+    }
+
+    static removeMeal(mealId) {
+        const meals = this.getMeals();
+        const updatedMeals = meals.filter(meal => meal.id !== mealId);
+        sessionStorage.removeItem('meals');
+        localStorage.setItem('meals', JSON.stringify(updatedMeals));
+    }
+
+    static getWorkouts() {
+        let workouts;
+        if (localStorage.getItem('workouts') === null) {
+            workouts = [];
+        } else {
+            workouts = JSON.parse(localStorage.getItem('workouts'));
+        }
+        return workouts;
+    }
+
+    static saveWorkout(workout) {
+        const workouts = this.getWorkouts();
+        workouts.push(workout);
+        localStorage.setItem('workouts', JSON.stringify(workouts));
+    }
+
+    static removeWorkout(workoutId) {
+        const workouts = this.getWorkouts();
+        const updatedWorkouts = workouts.filter(
+            workout => workout.id !== workoutId
+        );
+        sessionStorage.removeItem(workouts);
+        localStorage.setItem('workouts', JSON.stringify(updatedWorkouts));
+    }
+
+    static clear() {
+        const calorieLimit = localStorage.getItem('calorieLimit');
+        localStorage.clear(); // It clears all items
+        localStorage.setItem('calorieLimit', calorieLimit);
+    }
+}
+
 class App {
     constructor() {
         this._tracker = new CalorieTracker();
+        this._eventHandlers();
+        this._tracker.loadItems();
+    }
 
+    _eventHandlers() {
         document
             .getElementById('meal-form')
             .addEventListener('submit', this._newItem.bind(this, 'meal'));
